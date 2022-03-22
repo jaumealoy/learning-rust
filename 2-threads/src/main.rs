@@ -4,7 +4,7 @@ use std::rc::Rc;
 use std::cell::RefCell;
 use std::boxed::Box;
 
-const MAX: i64 = 10000;
+const MAX: i64 = 1000000;
 const THREAD: i8 = 10;
 
 
@@ -17,7 +17,7 @@ fn main() {
 
     let new_counter: Arc<i64> = Arc::new(0);
 
-    let my_counter: Arc<Mutex<Box<i64>>> = Arc::new(Mutex::new(Box::new(0)));
+    let my_counter: Arc<Mutex<i64>> = Arc::new(Mutex::new(0));
 
     //let value = my_counter.lock().unwrap();
     //println!("Simple is {0}", value);
@@ -37,20 +37,20 @@ fn main() {
         thread.join().unwrap();
     }
 
-    println!("Total is: {}", new_counter)
+    println!("Total is: {}", *my_counter.lock().unwrap())
 }
 
 
-fn worker(counter: Arc<Mutex<Box<i64>>>) {
+fn worker(counter: Arc<Mutex<i64>>) {
     println!("Hello from another thread");
 
     for i in 0..(MAX / (THREAD as i64)) {
-        let my_box = counter.lock().unwrap();
+        let mut my_box = counter.lock().unwrap();
         // TODO: increment the counter
-
+        *my_box += 1;
     }
 
     let value = counter.lock().unwrap();
-    println!("Value is {0}", value)
+    println!("Value is {0}", *value)
 
 }
