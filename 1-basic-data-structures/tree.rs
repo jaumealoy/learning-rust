@@ -1,24 +1,34 @@
 use std::rc::Rc;
+use std::boxed::Box;
+use std::cell::RefCell;
 
-use crate::stack::UnlimitedStack;
-use crate::stack::Stack;
-
-pub struct BinaryTree<T: PartialOrd> {
-    root: Option<Rc<TreeNode<T>>>
+pub struct BinaryTree<T: PartialOrd + std::fmt::Display> {
+    root: Option<Rc<RefCell<TreeNode<T>>>>
 }
 
-struct TreeNode<T: PartialOrd> {
+struct TreeNode<T: PartialOrd + std::fmt::Display> {
     value: T,
-    left: Option<Rc<TreeNode<T>>>,
-    right: Option<Rc<TreeNode<T>>>
+    left: Option<Rc<RefCell<TreeNode<T>>>>,
+    right: Option<Rc<RefCell<TreeNode<T>>>>
+}
+
+impl<T: PartialOrd + std::fmt::Display> TreeNode<T> {
+    fn new(value: T) -> Self {
+        TreeNode {
+            value: value,
+            left: None,
+            right: None
+        }
+    }
 }
 
 pub trait Tree<T: PartialOrd> {
     fn new() -> Self;
     fn add(&mut self, value: T) -> ();
+    fn add_anchor(&mut self, value: T) -> ();
 }
 
-impl<T: PartialOrd> Tree<T> for BinaryTree<T> {
+impl<T: PartialOrd + std::fmt::Display> Tree<T> for BinaryTree<T> {
     fn new() -> Self {
         BinaryTree {
             root: None
@@ -30,67 +40,46 @@ impl<T: PartialOrd> Tree<T> for BinaryTree<T> {
             None => {
                 self.root = Some(
                     Rc::new(
-                        TreeNode {
-                            value: value,
-                            left: None,
-                            right: None
-                        }
+                        RefCell::new(
+                            TreeNode {
+                                value: value,
+                                left: None,
+                                right: None
+                            }
+                        )
                     )
                 )
             },
 
             Some(root) => {
-                let mut stack = UnlimitedStack::<Rc<TreeNode<T>>>::new();
-                stack.push(root.clone());
-
-                let mut parent: Option<Rc<TreeNode<T>>> = None;
+                let mut parent: Rc<RefCell::<TreeNode<T>>> = root.clone();
+                let mut current: Option<Rc<RefCell::<TreeNode<T>>>> = Some(root.clone());
+                let mut is_left_child: bool = false;
                 
-                while !stack.is_empty() {
-                    let current = stack.peek();
-                    
-                    if value > current.value {
-                        match &current.right {
-                            Some(x) => {
-                                parent = Some(current.clone());
-                                
-                                let r = x.clone();
-                                stack.push(r);
-                            }
-                            _ => ()
-                        } 
+                while let Some(x) = current.clone() {
+                    let node = (*x).borrow();
+
+                    parent = x.clone();
+                    if value > node.value {
+                        is_left_child = false;
+                        current = node.right.clone();
                     } else {
-                        // <= 
-                        match &current.left {
-                            Some(x) => {
-                                parent = Some(current.clone());
-                                
-                                let r = x.clone();
-                                stack.push(r);
-                            }
-                            _ => ()
-                        } 
+                        is_left_child = true;
+                        current = node.left.clone();
                     }
                 }
 
-                match parent {
-                    None => {
-                        // new node is the root
-                        self.root = Some(
-                            Rc::new(
-                                TreeNode {
-                                    left: None,
-                                    right: None,
-                                    value: value
-                                }
-                            )
-                        )
-                    },
-
-                    Some(x) => {
-                        // is this new node the left child or the right child?
-                    }
+                let mut parent = (*parent).borrow_mut();
+                if is_left_child {
+                    parent.left = Some(Rc::new(RefCell::new(TreeNode::new(value))));
+                } else {
+                    parent.right = Some(Rc::new(RefCell::new(TreeNode::new(value))));
                 }
             }
         }
+    }
+
+    fn add_anchor(&mut self, value: T) -> () {
+        // TODO
     }
 }

@@ -15,6 +15,7 @@ fn print_stack_status(stack: &stack::UnlimitedStack::<i32>) {
 fn main() {
     let mut stack = stack::UnlimitedStack::<i32>::new();
 
+    // stack
     stack.push(0);
     stack.push(1);
     stack.push(2);
@@ -28,6 +29,11 @@ fn main() {
 
     print_stack_status(&stack);
 
-
+    // tree
     let mut tree = tree::BinaryTree::<i64>::new();
+    tree.add(100);
+    tree.add(150);
+    tree.add(75);
+    tree.add(25);
+    tree.add(10);
 }
