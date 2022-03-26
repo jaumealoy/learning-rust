@@ -1,11 +1,4 @@
-# Learning Rust
-This repository shows my progress learning Rust. I do not like following tutorials or a book to learn a new skill. I like having a problem and coming up with a solution that meets my needs.
-
-As currently I do not have any project where I want to use Rust, I will make some basic projects to get in touch with this programming language. I will use some college projects to come up with ideas.
-
 # Data structures
-At some point I have learnt Ada and one of the college tasks was to implement different data structures using Ada. In my opinion this is a good exercise to get started as I will be forced to learn some basic  statements (loops, conditionals, error handling) and other Rust's features.
-
 The goal is to implement the following data structures:
 - Stack
 - Queue
@@ -49,11 +42,6 @@ As we want our stack to hold any amount of element, we cannot use a static array
 We will create a stack struct which will be just a pointer to the first stack node. As rust does not have a null pointer we must use the Option type to indicate that it might be a None value. 
 If the option has a None value will mean that the stack is empty, otherwise it will Some(x) value where x will be the value.
 
-### Static memory
-Now let's say that our use case won't need an *unlimited* amount of elements and we know there won't be more elements than a maximum amount.
-
-We can create another implementation of the stack, which will be more efficient as it does not allocate or free memory every time we make a push or a pop. 
-
 ## Binary tree
 Once we have created a dynamic stack, creating new data structures is almost straight forward as we already know the basics.
 
@@ -88,4 +76,16 @@ Let's continue creating our tree node. This struct will have 3 fields:
 - The left child
 - The right child
 
-The left child and the right child must be empty or not. In addition, the can change over time, as new nodes can be added and removed. Therefore, its type should be something like `Option<Rc<TreeNode<T>>>`.
+The left child and the right child must be empty or not. In addition, the can change over time, as new nodes can be added and removed. Therefore, its type should be something like `Option<Rc<RefCell<TreeNode<T>>>>`.
+
+Let's breakdown this type:
+
+- The option enum allows us to have nodes without any child.
+- The Rc (reference count) allows us to have multiple owners of the nodes, which help us to implement the operations
+- The RefCell allow us to mutate that its data, in this case, the TreeNode.
+
+There might be a simpler way to implement a binary tree, but for now this works.
+
+For now we will just implement the insertion to the tree. There are differents ways to add a node to a tree. To keep things simple, we will use two pointers to our nodes: the parent node and the current node. We will update those variables until we find the right spot for the new value.
+
+In short, we will update the `current` variable until its value is None. When that happens, we will create a new node to parent node. If parent node is None, the new node is the root of the tree.

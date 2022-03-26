@@ -2,14 +2,16 @@ use std::rc::Rc;
 use std::boxed::Box;
 use std::cell::RefCell;
 
+type Link<T> = Option<Rc<RefCell<TreeNode<T>>>>;
+
 pub struct BinaryTree<T: PartialOrd + std::fmt::Display> {
-    root: Option<Rc<RefCell<TreeNode<T>>>>
+    root: Link<T>
 }
 
 struct TreeNode<T: PartialOrd + std::fmt::Display> {
     value: T,
-    left: Option<Rc<RefCell<TreeNode<T>>>>,
-    right: Option<Rc<RefCell<TreeNode<T>>>>
+    left: Link<T>,
+    right: Link<T>
 }
 
 impl<T: PartialOrd + std::fmt::Display> TreeNode<T> {
@@ -25,7 +27,6 @@ impl<T: PartialOrd + std::fmt::Display> TreeNode<T> {
 pub trait Tree<T: PartialOrd> {
     fn new() -> Self;
     fn add(&mut self, value: T) -> ();
-    fn add_anchor(&mut self, value: T) -> ();
 }
 
 impl<T: PartialOrd + std::fmt::Display> Tree<T> for BinaryTree<T> {
@@ -39,15 +40,7 @@ impl<T: PartialOrd + std::fmt::Display> Tree<T> for BinaryTree<T> {
         match &self.root {
             None => {
                 self.root = Some(
-                    Rc::new(
-                        RefCell::new(
-                            TreeNode {
-                                value: value,
-                                left: None,
-                                right: None
-                            }
-                        )
-                    )
+                    Rc::new(RefCell::new(TreeNode::new(value)))
                 )
             },
 
@@ -78,8 +71,4 @@ impl<T: PartialOrd + std::fmt::Display> Tree<T> for BinaryTree<T> {
             }
         }
     }
-
-    fn add_anchor(&mut self, value: T) -> () {
-        // TODO
-    }
-}
+} 
