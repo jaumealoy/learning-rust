@@ -1,4 +1,5 @@
 use std::borrow::Borrow;
+use std::ops::DerefMut;
 use std::rc::Rc;
 use std::cell::RefCell;
 
@@ -34,6 +35,20 @@ fn main() {
     // to change its value, we must declare the variable as mutable
     *my_box += 1;
     println!("my_box = {0}", *my_box); // although we can dereference it explicitly
+
+    let mut the_same_box = my_box.deref_mut();
+    *the_same_box += 1;
+    println!("the_same_box = {0}", *the_same_box);
+
+    // two mutable references at the same time!
+    //println!("the_same_box = {0} = {1}", *the_same_box, *my_box);
+
+    let mut the_same_box_again = my_box.deref_mut();
+    *the_same_box_again += 1; // this is allowed as neither my_box or the_same_box are used below
+
+    // code won't compile if the following line is not commented:
+    // there will be 3 mutable references to the same data!
+    //println!("the_same_box = {0} = {1} = {2}", *the_same_box, my_box, the_same_box_again);
 
     // Reference counter
     let my_rc = Rc::new(22);
