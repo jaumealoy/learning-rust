@@ -10,3 +10,6 @@ If we are building a simple one-link list, we can use the Box smart pointer, as 
 
 ### Iterator trait
 The `Iterator<T>` trait allows to use our type in a loop expression. To implement this trait we only have to implement a method, which is `next()`. We must create a struct (for example `ListIterator`) which holds the state of the iteration. The `next` method will update this struct until there are no more elements.
+
+# Learn more
+Learn more Rust by creating more lists: https://rust-unofficial.github.io/too-many-lists/

@@ -1,5 +1,17 @@
 mod list;
 use list::List;
+use std::fmt::Display;
+
+fn print_list<T>(list: &List<T>) 
+where T: Display
+{
+    for element in list.iter() {
+        println!("Element: {0}", element);
+    }
+
+    println!("==========");
+}
+
 
 fn main() {
     // start by creating a new list
@@ -8,7 +20,10 @@ fn main() {
     my_list.add(1);
     my_list.add(2);
 
-    for element in my_list.iter() {
-        println!("Element: {0}", element);
-    }
+    print_list(&my_list);
+
+    my_list.remove_first();
+    my_list.remove_first();
+
+    print_list(&my_list);
 }

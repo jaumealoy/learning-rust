@@ -46,6 +46,65 @@ impl<T> List<T> {
         }
     }
 
+    /// can we remove the n-th element from a list using a Box?
+    /// if this was allowed, would we have multiple owners of the same box?
+    /// let'ts try by just removing adding a remove_first and remove_last operation
+    /*
+    pub fn remove(&mut self, index: usize) {
+        let mut current_index = index - 1;
+        let mut current = self.first.as_ref();
+        
+        while current_index > 0 && current.is_some() {
+            current = current.unwrap().next.as_ref();
+            current_index -= 1;
+        }
+
+        if current_index > 0 {
+            panic!("Removing invalid element");
+        }
+
+        let node = current.as_deref().unwrap();
+        let following = node.next.unwrap().next;
+        node.next = following;
+    }*/
+
+    pub fn remove_first(&mut self) {
+        match &mut self.first {
+            None => panic!("Trying to remove an element from an empty list"),
+            Some(first) => {
+                let value = first.next.take();
+                self.first = value;
+            }
+        }
+    }
+
+    /*
+    pub fn remove_last(&mut self) {
+        match &mut self.first {
+            Some(x) => {
+                let mut previous: Option<&mut Node<T>> = None;
+                let mut current = x.as_mut();
+                while current.next.is_some() {
+                    previous = Some(current);
+                    current = current.next
+                        .as_mut()
+                        .unwrap()
+                        .as_mut();
+                }
+
+                drop(current);
+
+                if previous.is_none() {
+                    self.first = None;
+                } else {
+                    previous.as_mut().unwrap().next = None;
+                }
+            },
+            None => ()
+        }
+    }
+    */
+
     pub fn iter(self: &Self) -> ListIterator<T> {
         ListIterator { 
             current: self.first.as_deref()
