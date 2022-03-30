@@ -4,6 +4,9 @@ use std::rc::Rc;
 use std::cell::RefCell;
 use std::boxed::Box;
 
+mod matrix;
+use matrix::Matrix;
+
 const MAX: i64 = 1000000;
 const THREAD: i8 = 10;
 
@@ -37,7 +40,16 @@ fn main() {
         thread.join().unwrap();
     }
 
-    println!("Total is: {}", *my_counter.lock().unwrap())
+    println!("Total is: {}", *my_counter.lock().unwrap());
+
+    // Matrix example
+    let mut matrix = Matrix::new(3, 3);
+    matrix.set(2, 0, 1);
+    matrix.set(0, 2, 1);
+    println!("{}", matrix);
+    
+    let identity = Matrix::identity(3);
+    println!("{}", identity);
 }
 
 

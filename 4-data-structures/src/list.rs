@@ -78,32 +78,68 @@ impl<T> List<T> {
         }
     }
 
-    /*
+    /* 
+    It's impossible to remove the last element using two pointers as we would
+    end with two mutable references: previous and current, and we could get
+    a mutable reference to current from previous (and then we would have two 
+    mutable references to the same data)
+
     pub fn remove_last(&mut self) {
         match &mut self.first {
             Some(x) => {
-                let mut previous: Option<&mut Node<T>> = None;
-                let mut current = x.as_mut();
-                while current.next.is_some() {
-                    previous = Some(current);
-                    current = current.next
-                        .as_mut()
-                        .unwrap()
-                        .as_mut();
-                }
-
-                drop(current);
-
-                if previous.is_none() {
-                    self.first = None;
-                } else {
-                    previous.as_mut().unwrap().next = None;
+                let mut current = x;
+                let mut previous = ...;
+                while let Some(next) = current.next.as_mut() {
+                    
+                    current = next;
                 }
             },
-            None => ()
+            None => panic!("Trying to remove and element from an empty list")
         }
     }
     */
+
+    pub fn remove_last(&mut self) {
+        self.remove(self.count() - 1);
+    }
+
+    pub fn remove(&mut self, index: usize) {
+        let mut current = &mut self.first;
+        let mut remaining = index;
+        
+        while remaining > 0 {
+            remaining -= 1;
+
+            current = match current.as_mut() {
+                Some(x) => &mut x.next,
+                None => panic!("Index out of range (I)")
+            };
+        }
+
+        // take the ownership of the previous node
+        match current.take() {
+            Some(x) => {
+                *current = x.next;
+            },
+            None => panic!("Index out of range (II)")
+        }
+    }
+
+    pub fn count(&self) -> usize {
+        let mut current = &self.first;
+        
+        let mut length = 0;
+        while current.is_some() {
+            current = &current.as_ref()
+                .unwrap()
+                .next;
+
+            length += 1;
+        }
+
+        length
+    }
+    
 
     pub fn iter(self: &Self) -> ListIterator<T> {
         ListIterator { 
