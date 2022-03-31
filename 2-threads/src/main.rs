@@ -3,6 +3,7 @@ use std::sync::*;
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::boxed::Box;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 mod matrix;
 use matrix::Matrix;
@@ -50,6 +51,24 @@ fn main() {
     
     let identity = Matrix::identity(3);
     println!("{}", identity);
+
+    let matrix_sum = matrix + Matrix::identity(3);
+    println!("{}", matrix_sum);
+
+    let matrix_mul = Matrix::identity(3) * matrix_sum;
+    println!("{}", matrix_mul);
+
+
+    let single_start = SystemTime::now();
+    let matrix_mul = Matrix::identity(500) * Matrix::identity(500);
+
+    let single_diff = single_start.elapsed().unwrap();
+    println!("{} ms", single_diff.as_millis());
+
+    let thread_start = SystemTime::now();
+    let matrix_mul_thread = Matrix::mul(&Matrix::identity(500), &Matrix::identity(500));
+    let thread_diff = thread_start.elapsed().unwrap();
+    println!("{} ms", thread_diff.as_millis());
 }
 
 

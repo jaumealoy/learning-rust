@@ -1,5 +1,9 @@
-use std::ops::{Add, Sub};
+use std::ops::{Add, Sub, Mul};
 use std::fmt::{Display, Result};
+use std::{panic, vec};
+use std::thread::{self, JoinHandle};
+use std::sync::{Mutex, Arc};
+use std::clone::Clone;
 
 type T = i64;
 
@@ -37,6 +41,50 @@ impl Matrix {
     pub fn get(&self, row: usize, column: usize) -> &T {
         &self.data[row][column]
     }
+
+    pub fn mul(&self, rhs: &Matrix) -> Matrix {
+        // MxN * NxP -> MxP
+        if (self.columns != rhs.columns) {
+            panic!("Cannot multiply matrices: dimensions are not compatible");
+        }
+
+        // we could spawn a thread for each cell in the new matrix, but that would be a lot of
+        // thread overhead and it would not increase the parallelism
+        let mut result = Matrix::new(self.rows, rhs.columns);
+        
+        let mut threads = Vec::new();
+
+        let arc_a = Arc::new(self.clone());
+        let arc_b = Arc::new(rhs.clone());
+        let data = Arc::new(Mutex::new(vec![vec![0; result.rows]; result.columns]));
+
+        // A * B = C
+        // Cij = sum A
+        for row in 0..result.rows {
+            for column in 0..result.columns {
+                let a = arc_a.clone();
+                let b = arc_b.clone();
+                let res = data.clone();
+
+                let thread = std::thread::spawn(move || {
+                    let mut value: T = 0;
+                    for i in 0..a.columns {
+                        value += a.get(row, i) * b.get(i, column);
+                    }
+                    res.lock().unwrap()[row][column] = value;
+                });
+                threads.push(thread);
+            }
+        }
+
+        for t in threads {
+            t.join();
+        }
+
+        result.data = data.lock().unwrap().to_vec();
+
+        result
+    }
 }
 
 impl Display for Matrix {
@@ -49,5 +97,88 @@ impl Display for Matrix {
         }
 
         Ok(())
+    }
+}
+
+impl Add for Matrix {
+    type Output = Matrix;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        if self.columns != rhs.columns && self.rows != rhs.columns {
+            panic!("Cannot sum matrices: dimensions are not compatible");
+        }
+
+        let mut matrix = Matrix::new(self.columns, self.rows);
+
+        for row in 0..self.rows {
+            for column in 0..self.columns {
+                matrix.set(row, column, self.get(row, column) + rhs.get(row, column));
+            }
+        }
+
+        matrix
+    }
+}
+
+impl Sub for Matrix {
+    type Output = Matrix;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        if self.columns != rhs.columns && self.rows != rhs.columns {
+            panic!("Cannot subtract matrices: dimensions are not compatible");
+        }
+
+        let mut matrix = Matrix::new(self.columns, self.rows);
+
+        for row in 0..self.rows {
+            for column in 0..self.columns {
+                matrix.set(row, column, self.get(row, column) - rhs.get(row, column));
+            }
+        }
+
+        matrix
+    }
+}
+
+impl Mul for Matrix {
+    type Output = Matrix;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        // MxN * NxP -> MxP
+        if (self.columns != rhs.columns) {
+            panic!("Cannot multiply matrices: dimensions are not compatible");
+        }
+
+        let mut result = Matrix::new(self.rows, rhs.columns);
+
+        // A * B = C
+        // Cij = sum A
+        for row in 0..result.rows {
+            for column in 0..result.columns {
+                let mut value: T = 0;
+                for i in 0..self.columns {
+                    value += self.get(row, i) * rhs.get(i, column);
+                }
+                result.set(row, column, value);
+            }
+        }
+
+        result
+    }
+}
+
+impl Clone for Matrix {
+    fn clone(&self) -> Self {
+        Matrix { 
+            rows: self.rows.clone(), 
+            columns: self.columns.clone(), 
+            data: self.data.clone() 
+        }
+    }
+
+    fn clone_from(&mut self, source: &Self) {
+        self.rows = source.rows;
+        self.columns = source.columns;
+        self.data = source.data.clone();
     }
 }
