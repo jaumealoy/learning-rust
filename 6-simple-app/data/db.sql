@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS users (
+    `id` INTEGER AUTO_INCREMENT PRIMARY KEY,
+    `email` VARCHAR(64),
+    `name` VARCHAR(32),
+    `age` SMALLINT DEFAULT 0,
+    `created` DATETIME DEFAULT NOW()
+);

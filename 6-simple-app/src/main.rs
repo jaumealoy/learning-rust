@@ -1,23 +1,34 @@
 mod models;
+mod database;
+mod user_dao;
 use models::{UserCollection, User};
+use mysql_async::prelude::Queryable;
 
 #[tokio::main]
 async fn main() {
+    // load .env fil
+    dotenv::dotenv();
+
+    // init database
+    database::init().await;
+
     loop {
         let selected_option = show_menu();
         println!("-> {}", selected_option);
 
         if selected_option == 0 {
-            let users: UserCollection = vec![];
+            let users: UserCollection = user_dao::get_users().await;
 
             for user in users {
-                print_user(&user);
+                println!("{}", user);
             }
         } else if selected_option == 4 {
             println!("Good bye!");
             break;
         }
     }
+
+    database::close().await;
 }
 
 fn show_menu() -> u8 {
@@ -64,8 +75,4 @@ fn show_menu() -> u8 {
     }
 
     option
-}
-
-fn print_user(user: &User) {
-    println!("#{}\t{}\t{}\t{}", user.id, user.email, user.name, user.created.format("%Y-%m-%d"));
 }
