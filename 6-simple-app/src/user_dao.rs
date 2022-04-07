@@ -1,6 +1,8 @@
+use std::vec;
+
 use chrono::{Utc, DateTime, NaiveDateTime};
-use mysql_async::prelude::Queryable;
-use mysql_async::Row;
+use mysql_async::prelude::{Queryable, ToValue};
+use mysql_async::{Row, Params, Value};
 
 use crate::models::{User, UserCollection};
 use crate::database;
@@ -31,3 +33,23 @@ pub async fn get_users() -> UserCollection {
 
     result
 }
+
+pub async fn create_user<'a>(user: &'a mut User) -> &'a mut User {
+    let mut con = database::get_connection().await.unwrap();
+    
+    let params = Params::Positional(vec![
+        user.email.to_value(),
+        user.name.to_value(),
+        user.age.to_value(),
+        user.created.format("%Y-%m-%d %H:%M:%S").to_string().to_value()
+    ]);
+
+    let insert = con
+        .exec_drop("INSERT INTO users VALUES (NULL, ?, ?, ?, ?)", params)
+        .await;
+    
+    let last_id = con.last_insert_id().unwrap();
+
+    user.id = last_id as usize;
+    user
+} 

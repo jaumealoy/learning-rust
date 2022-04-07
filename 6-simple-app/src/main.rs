@@ -1,6 +1,7 @@
 mod models;
 mod database;
 mod user_dao;
+use chrono::DateTime;
 use models::{UserCollection, User};
 use mysql_async::prelude::Queryable;
 
@@ -22,6 +23,18 @@ async fn main() {
             for user in users {
                 println!("{}", user);
             }
+        } else if selected_option == 1 {
+            let mut new_user = User {
+                id: 0,
+                name: text_input("Name: "),
+                email: text_input("Email: "),
+                age: 37,
+                created: chrono::Utc::now()
+            };
+
+            user_dao::create_user(&mut new_user).await;
+
+            println!("User inserted with id {}", new_user.id);
         } else if selected_option == 4 {
             println!("Good bye!");
             break;
@@ -75,4 +88,15 @@ fn show_menu() -> u8 {
     }
 
     option
+}
+
+fn text_input(prompt: &str) -> String {
+    let mut buffer = String::new();
+
+    print!("{}", prompt);
+    
+    let input = std::io::stdin();
+    input.read_line(&mut buffer);
+
+    buffer
 }
