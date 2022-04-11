@@ -11,9 +11,13 @@ async fn main() {
         .await
         .unwrap();
 
-    println!("{:?}", exchange_information);
+    // println!("{:?}", exchange_information);
 
     // TODO: connect to websockets client
+    // binance_client.add_listener(|| {
+    //     println!("Callback");
+    // });
+
     let is_connected = binance_client.get_ticket_updates()
         .await;
 

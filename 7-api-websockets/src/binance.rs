@@ -4,6 +4,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 pub struct BinanceClient {
     http_client: reqwest::Client,
+    ticker_listeners: Vec<Box<dyn Fn(&str, f64) -> ()>>
 }
 
 impl BinanceClient {
@@ -13,7 +14,8 @@ impl BinanceClient {
             .unwrap();
         
         BinanceClient {
-            http_client: client
+            http_client: client,
+            ticker_listeners: vec![]
         }
     }
 
@@ -43,19 +45,41 @@ impl BinanceClient {
             .await
             .expect("Failed to conenct");
          
-        let (read, write) = ws_stream.split();
+        let (_write, read) = ws_stream.split();
 
 
         let ws_to_stdout = {
-            // read.for_each(|msg| async {
-            //     let data = msg.unwrap().into_data();
-            //     tokio::io::stdout().write_all(&data).await.unwrap();
-            // })
+            read.for_each(|msg| async {
+                // let data = msg.unwrap().into_data();
+                // tokio::io::stdout().write_all(&data).await.unwrap();
+
+                let raw_data = msg
+                    .unwrap()
+                    .into_text()
+                    .unwrap();
+
+                let data = serde_json::from_str::<Vec<responses::TickerUpdate>>(&raw_data)
+                    .unwrap();
+
+                for symbol in data {
+                    for listener in &self.ticker_listeners {
+                        listener(&symbol.symbol, symbol.get_last_price());
+                    }
+
+                    // println!("Symbol {}: {}", symbol.symbol, symbol.get_last_price())
+                }
+            })
         };
 
-        pin_mut!(ws_to_stdout);
+        //pin_mut!(ws_to_stdout);
+        ws_to_stdout.await;
 
         true
+    }
+
+    pub fn add_listener(&mut self, callback: Box<dyn Fn(&str, f64) -> ()>) {
+        self.ticker_listeners
+            .push(callback)
     }
 }
 
@@ -96,5 +120,21 @@ mod responses {
         serverTime: u64,
         rateLimits: Vec<RateLimit>,
         symbols: Vec<Symbol>
+    }
+
+    #[derive(Deserialize, Debug)]
+    pub struct TickerUpdate {
+        #[serde(rename="s")]
+        pub symbol: String,
+        
+        #[serde(rename="c")]
+        last_price: String
+    }
+
+    impl TickerUpdate {
+        pub fn get_last_price(&self) -> f64 {
+            self.last_price.parse::<f64>()
+                .unwrap()
+        }
     }
 }
