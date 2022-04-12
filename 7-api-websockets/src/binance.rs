@@ -1,10 +1,14 @@
-use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
+use std::borrow::BorrowMut;
+
+use tokio_tungstenite::{connect_async, tungstenite::{protocol::Message, handshake::server::Callback}};
 use futures_util::{future, pin_mut, StreamExt};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
+type CallbackFunction = dyn Fn(&str, f64) -> ();
+
 pub struct BinanceClient {
     http_client: reqwest::Client,
-    ticker_listeners: Vec<Box<dyn Fn(&str, f64) -> ()>>
+    ticker_listeners: Vec<Box<CallbackFunction>>
 }
 
 impl BinanceClient {
@@ -40,13 +44,12 @@ impl BinanceClient {
         }
     }
 
-    pub async fn get_ticket_updates(&self) -> bool {
+    pub async fn get_ticket_updates(&mut self) -> bool {
         let (ws_stream, _) = connect_async("wss://stream.binance.com:9443/ws/!miniTicker@arr")
             .await
             .expect("Failed to conenct");
          
         let (_write, read) = ws_stream.split();
-
 
         let ws_to_stdout = {
             read.for_each(|msg| async {
@@ -58,15 +61,15 @@ impl BinanceClient {
                     .into_text()
                     .unwrap();
 
-                let data = serde_json::from_str::<Vec<responses::TickerUpdate>>(&raw_data)
-                    .unwrap();
+                let data = serde_json::from_str::<Vec<responses::TickerUpdate>>(&raw_data);
 
-                for symbol in data {
-                    for listener in &self.ticker_listeners {
-                        listener(&symbol.symbol, symbol.get_last_price());
+                if let Ok(updates) = data {
+                    for symbol in updates {
+                        for listener in &self.ticker_listeners {
+                //          (*listener)(&symbol.symbol, symbol.get_last_price());
+                            listener(&symbol.symbol, symbol.get_last_price());
+                        }
                     }
-
-                    // println!("Symbol {}: {}", symbol.symbol, symbol.get_last_price())
                 }
             })
         };
@@ -77,7 +80,7 @@ impl BinanceClient {
         true
     }
 
-    pub fn add_listener(&mut self, callback: Box<dyn Fn(&str, f64) -> ()>) {
+    pub fn add_listener(&mut self, callback: Box<CallbackFunction>) {
         self.ticker_listeners
             .push(callback)
     }
@@ -106,11 +109,11 @@ mod responses {
     }
 
     #[derive(Deserialize, Debug)]
-    struct Symbol {
-        symbol: String,
-        baseAsset: String,
+    pub struct Symbol {
+        pub symbol: String,
+        pub baseAsset: String,
         baseAssetPrecision: u8,
-        quoteAsset: String,
+        pub quoteAsset: String,
         quoteAssetPrecision: u8
     }
 
@@ -119,7 +122,7 @@ mod responses {
         timezone: String,
         serverTime: u64,
         rateLimits: Vec<RateLimit>,
-        symbols: Vec<Symbol>
+        pub symbols: Vec<Symbol>
     }
 
     #[derive(Deserialize, Debug)]
