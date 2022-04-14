@@ -1,10 +1,14 @@
+#[macro_use] extern crate rocket;
+
 mod binance;
 use binance::BinanceClient;
 
 mod market_graph;
 use market_graph::MarketGraph;
 
+use std::sync::Arc;
 use std::cell::RefCell;
+use tokio::join;
 
 #[tokio::main]
 async fn main() {
@@ -42,8 +46,18 @@ async fn main() {
     }));
 
     // connect to websockets client and subscribe to tickers channel
-    let is_connected = binance_client.get_ticket_updates()
-        .await;
+    let is_connected = binance_client.get_ticket_updates();
 
-    // TODO: create API
+    // create API
+    let api = rocket::build()
+        //.manage(&binance_client)
+        .mount("/", routes![world])
+        .launch();
+
+    join!(is_connected, api);
+}
+
+#[get("/<base>/<quote>")]
+fn world(binance: &rocket::State<BinanceClient>, base: &str, quote: &str) -> &'static str {
+    "Hello, world!"
 }

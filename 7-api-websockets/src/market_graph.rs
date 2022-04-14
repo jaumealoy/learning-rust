@@ -5,6 +5,8 @@ use std::rc::Rc;
 use std::cell::RefCell;
 use std::vec;
 
+use crate::binance::BinanceClient;
+
 type Element = Rc<RefCell<Node>>;
 
 struct Edge {
@@ -147,6 +149,11 @@ impl MarketGraph {
         }
     }
 }
+
+// wow, that's dangerous (https://doc.rust-lang.org/nomicon/send-and-sync.html)
+// we do not care about inconsistent values
+unsafe impl Sync for BinanceClient {}
+unsafe impl Send for BinanceClient {}
 
 mod tests {
     use super::MarketGraph;
