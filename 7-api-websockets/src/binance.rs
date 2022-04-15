@@ -44,7 +44,7 @@ impl BinanceClient {
         }
     }
 
-    pub async fn get_ticket_updates(&mut self) -> bool {
+    pub async fn get_ticket_updates(&self) -> bool {
         let (ws_stream, _) = connect_async("wss://stream.binance.com:9443/ws/!miniTicker@arr")
             .await
             .expect("Failed to conenct");

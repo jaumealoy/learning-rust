@@ -152,8 +152,8 @@ impl MarketGraph {
 
 // wow, that's dangerous (https://doc.rust-lang.org/nomicon/send-and-sync.html)
 // we do not care about inconsistent values
-unsafe impl Sync for BinanceClient {}
-unsafe impl Send for BinanceClient {}
+unsafe impl Sync for MarketGraph {} // data can be accessed safely from another thread
+unsafe impl Send for MarketGraph {} // ownership can be transferred to another thread
 
 mod tests {
     use super::MarketGraph;
