@@ -11,7 +11,8 @@ type Element = Rc<RefCell<Node>>;
 
 struct Edge {
     price: f64,
-    node: Element
+    node: Element,
+    symbol: String
 }
 
 struct Node {
@@ -46,8 +47,8 @@ impl MarketGraph {
     }
 
     pub fn create_market(&mut self, market: &String, first_currency: &String, second_currency: &String) {
-        self.add_neighbour(first_currency, second_currency);
-        self.add_neighbour(second_currency, first_currency);
+        self.add_neighbour(first_currency, second_currency, market);
+        self.add_neighbour(second_currency, first_currency, market);
 
         let first_node = self.nodes.get(first_currency).unwrap();
         let second_node = self.nodes.get(second_currency).unwrap();
@@ -55,7 +56,7 @@ impl MarketGraph {
         self.markets.insert(market.to_string(), (first_node.clone(), second_node.clone()));
     }
 
-    fn add_neighbour(&mut self, first_currency: &String, second_currency: &String) {
+    fn add_neighbour(&mut self, first_currency: &String, second_currency: &String, symbol: &String) {
         let node = self.nodes.get(first_currency).unwrap().clone();
 
         let mut contains = false;
@@ -77,12 +78,13 @@ impl MarketGraph {
 
             let edge = Edge {
                 price: 0.0,
-                node: other_node
+                node: other_node,
+                symbol: symbol.clone()
             };
 
             node.borrow_mut().neighbours.push(Rc::new(RefCell::new(edge)));
 
-            self.add_neighbour(second_currency, first_currency);
+            self.add_neighbour(second_currency, first_currency, symbol);
         }
     }
 
@@ -144,6 +146,61 @@ impl MarketGraph {
 
         if (*current).borrow().currency.eq(second_currency) {
             Some(prices.pop().unwrap())
+        } else{
+            None
+        }
+    }
+
+    pub fn get_conversion_path(&self, first_currency: &str, second_currency: &str) -> Option<Vec::<(String, bool)>> {
+        let initial_node = self.nodes.get(first_currency).unwrap().clone();
+        let mut stack = vec![initial_node.clone()];
+        let mut visited = HashSet::<String>::new();
+
+        let mut path_stack: Vec::<Vec::<(String, bool)>> = vec![vec![]];
+        let mut current = initial_node.clone();
+
+        while !stack.is_empty() {
+            current = stack.pop().unwrap();
+
+            if (*current).borrow().currency.eq(second_currency) {
+                break;
+            }
+
+            let mut current_path = path_stack.pop().unwrap();
+
+            for neighbour in &(*current).borrow().neighbours {
+                let edge = neighbour.clone();
+
+                let other_node = (*neighbour.clone())
+                    .borrow()
+                    .node
+                    .clone();
+                    
+                let currency = &(*other_node).borrow().currency;
+                if !visited.contains(currency) {
+
+                    stack.push(other_node.clone());
+
+                    let symbol = &(*edge).borrow().symbol;
+
+                    let mut local_copy = current_path.clone();
+                    if symbol.starts_with(&(*current).borrow().currency) {
+                        // sell
+                        local_copy.push((symbol.clone(), false));
+                    } else {
+                        // buy
+                        local_copy.push((symbol.clone(), true));
+                    }
+
+                    path_stack.push(local_copy);
+                    
+                    visited.insert(currency.to_string());
+                }
+            }
+        }
+
+        if (*current).borrow().currency.eq(second_currency) {
+            Some(path_stack.pop().unwrap())
         } else{
             None
         }

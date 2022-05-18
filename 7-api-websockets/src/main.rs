@@ -9,8 +9,9 @@ use market_graph::MarketGraph;
 use std::sync::{Arc, Mutex, RwLock};
 use std::cell::RefCell;
 use tokio::join;
+use chrono::{DateTime, Utc, NaiveDateTime};
 
-use rocket::serde::json::{Value, json};
+use rocket::serde::json::{Value, json, self};
 
 #[tokio::main]
 async fn main() {
@@ -44,7 +45,7 @@ async fn main() {
     // add event listeners
     let my_graph = graph.clone();
     binance_client.add_listener(Box::new(move |market, price| {
-        println!("{} -> {}", market, price);
+        //println!("{} -> {}", market, price);
     
         let mut writer = my_graph.write().unwrap();
         writer.update_price(&String::from(market), price);
@@ -56,7 +57,8 @@ async fn main() {
     // create API
     let api = rocket::build()
         .manage(graph.clone())
-        .mount("/", routes![world])
+        .manage(Arc::new(BinanceClient::new()))
+        .mount("/", routes![world, convert])
         .launch();
 
     join!(is_connected, api);
@@ -67,4 +69,36 @@ fn world(graph: &rocket::State<Arc<RwLock<MarketGraph>>>, base: &str, quote: &st
     let reader = graph.read().unwrap();
     let price = reader.get_price(&base.to_owned(), &quote.to_owned());
     json!(price)
+}
+
+#[get("/historic/<base>/<quote>?<time>")]
+async fn convert(graph: &rocket::State<Arc<RwLock<MarketGraph>>>, client: &rocket::State<Arc<BinanceClient>>, base: &str, quote: &str, time: i64) -> Value {
+    let conversion_path = graph
+        .read()
+        .unwrap()
+        .get_conversion_path(base, quote);
+    
+    match conversion_path {
+        Some(path) => {
+            let time = DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(time / 1000, 0), Utc);
+
+            let mut amount: f64 = 1.0;
+            for conversion in path {
+                let price = client.get_symbol_price(&conversion.0, time)
+                    .await;
+
+                if let Some(value) = price {
+                    if conversion.1 { // buy
+                        amount = amount / value;
+                    } else { // sell
+                        amount = amount * value;
+                    }
+                } else {
+                    return Value::Null;
+                }
+            }
+            json!(amount)
+        },
+        None => Value::Null
+    }
 }

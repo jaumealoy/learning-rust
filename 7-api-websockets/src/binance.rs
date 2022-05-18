@@ -3,6 +3,8 @@ use std::borrow::BorrowMut;
 use tokio_tungstenite::{connect_async, tungstenite::{protocol::Message, handshake::server::Callback}};
 use futures_util::{future, pin_mut, StreamExt};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use chrono::{DateTime, Utc, Duration};
+use std::collections::HashMap;
 
 type CallbackFunction = dyn Fn(&str, f64) -> ();
 
@@ -84,7 +86,49 @@ impl BinanceClient {
         self.ticker_listeners
             .push(callback)
     }
+
+    pub async fn get_symbol_price(&self, symbol: &str, time: DateTime<Utc>) -> Option<f64> {
+        let end_time = time + Duration::minutes(1);
+
+        let arguments = HashMap::from([
+            ("symbol".to_owned(), symbol.to_owned()),
+            ("interval".to_owned(), "1m".to_owned()),
+            ("startTime".to_owned(), format!("{}", time.timestamp_millis())),
+            ("endTime".to_owned(), format!("{}", end_time.timestamp_millis())),
+            ("limit".to_owned(), "1".to_owned())
+        ]);
+
+        let mut qs: String = String::new();
+        for entry in arguments {
+            qs.push_str(&format!("{}={}&", entry.0, entry.1));
+        }
+
+        let response = self.http_client.get(format!("https://api.binance.com/api/v3/klines?{}", qs))
+            .send()
+            .await
+            .unwrap()
+            .json()
+            .await
+            .unwrap();
+
+        match response {
+            serde_json::Value::Array(x) => {
+                let y = x[0].as_array().unwrap();
+
+                let close = y[4].as_str().unwrap().parse::<f64>();
+                if let Ok(price) = close {
+                    Some(price)
+                } else {
+                    None
+                }
+            },
+            _ => None
+        }
+    }
 }
+
+unsafe impl Sync for BinanceClient {}
+unsafe impl Send for BinanceClient {}
 
 pub enum BinanceListener {
     TickerUpdate(String, f64)
