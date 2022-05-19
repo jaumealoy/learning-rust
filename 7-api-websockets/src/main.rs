@@ -6,6 +6,7 @@ use binance::BinanceClient;
 mod market_graph;
 use market_graph::MarketGraph;
 
+use std::env;
 use std::sync::{Arc, Mutex, RwLock};
 use std::cell::RefCell;
 use tokio::join;
@@ -55,7 +56,16 @@ async fn main() {
     let is_connected = binance_client.get_ticket_updates();
 
     // create API
+    let mut config = rocket::Config::default();
+    
+    let port_env = std::env::var("PORT")
+        .unwrap_or("8000".to_owned());
+
+    let port = port_env.parse::<u16>().unwrap();
+    config.port = port;
+
     let api = rocket::build()
+        .configure(config)
         .manage(graph.clone())
         .manage(Arc::new(BinanceClient::new()))
         .mount("/", routes![world, convert])
